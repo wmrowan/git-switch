@@ -1,0 +1,67 @@
+#!/bin/bash
+
+BRANCH_DIR=.gitbranches
+if [ ! -e $BRANCH_DIR ]; then
+    mkdir $BRANCH_DIR
+fi
+
+LOCAL_BRANCHES=$(ls $BRANCH_DIR)
+
+BRANCH_NAME=$1
+
+# Find the current branch
+set -f
+BCH=$(git branch)
+FOUND=0
+for BRANCH in $BCH
+do
+    if [[ $FOUND -ne 0 ]]; then
+        CURRENT_BRANCH=$BRANCH
+        break
+    fi
+    if [[ $BRANCH == \* ]]; then
+        FOUND=1
+    fi
+done
+
+# No branch name means list available branches
+if [[ $BRANCH_NAME == "" ]]; then
+    for BRANCH in $LOCAL_BRANCHES
+    do
+        if [[ $BRANCH == $CURRENT_BRANCH ]]; then
+            echo "*" $BRANCH
+        else
+            echo " " $BRANCH
+        fi
+    done
+
+    exit 0
+fi
+
+## Switch out this branch
+
+CUR_BRANCH_DIR=$BRANCH_DIR/$CURRENT_BRANCH
+if [[ ! -e $CUR_BRANCH_DIR ]]; then
+    mkdir $CUR_BRANCH_DIR
+fi
+
+# Copy out all the files
+for FILE in $(ls --almost-all --ignore=".git*" .)
+do
+    mv $FILE $CUR_BRANCH_DIR
+done
+
+## Switch in the new branch
+
+IN_BRANCH_DIR=$BRANCH_DIR/$BRANCH_NAME
+if [[ ! -e $IN_BRANCH_DIR ]]; then
+    git checkout -b $BRANCH_NAME origin/$BRANCH_NAME
+    git reset --hard $BRANCH_NAME
+else
+    for FILE in $(ls --almost-all $IN_BRANCH_DIR)
+    do
+        mv $IN_BRANCH_DIR/$FILE .
+    done
+
+    git checkout -f $BRANCH_NAME
+fi
